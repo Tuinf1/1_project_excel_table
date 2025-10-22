@@ -110,12 +110,46 @@ def main():
         .sort_values(["channel", "seller"])
     )
 
-    # --- 8️⃣ Подсчёт статусов (на уровне заказов) ---
+    # # --- 8️⃣ Подсчёт статусов (на уровне заказов) ---
+    # status_df = (
+    #     orders_df.groupby("status", as_index=False)
+    #     .agg(cnt=("order_id", "nunique"))
+    #     .sort_values("cnt", ascending=False)
+    # )
+
+
+    # --- 8️⃣ Подсчёт статусов (на уровне заказов, строго по ТЗ) ---
+    orders_raw = pd.read_csv("data/orders.csv")
+
+    stages = ["created", "paid", "prod_started", "shipped", "delivered"]
+
     status_df = (
-        orders_df.groupby("status", as_index=False)
-        .agg(cnt=("order_id", "nunique"))
-        .sort_values("cnt", ascending=False)
+        orders_raw[orders_raw["status"].isin(stages)]
+        .groupby("status", as_index=False)
+        .agg(cnt=("id", "count"))
     )
+
+    # --- 9️⃣ Воронка и конверсии ---
+    funnel_counts = {s: int(status_df.loc[status_df["status"] == s, "cnt"].sum()) for s in stages}
+
+    # не допускаем роста стадий (если статистически получилось больше)
+    for i in range(1, len(stages)):
+        if funnel_counts[stages[i]] > funnel_counts[stages[i - 1]]:
+            funnel_counts[stages[i]] = funnel_counts[stages[i - 1]]
+
+    conv_pairs = [
+        ("paid", "created"),
+        ("prod_started", "paid"),
+        ("shipped", "prod_started"),
+        ("delivered", "shipped"),
+        ("delivered", "created"),
+    ]
+
+    conv_df = pd.DataFrame([
+        {"stage": f"{b}/{a}", "rate": round(funnel_counts[b] / funnel_counts[a], 4) if funnel_counts[a] else 0.0}
+        for b, a in conv_pairs
+    ])
+
 
     # --- 9️⃣ Воронка и конверсии ---
     stages = ["created", "paid", "prod_started", "shipped", "delivered"]
