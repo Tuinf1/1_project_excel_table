@@ -29,7 +29,7 @@ def insert_csv_to_db(conn, csv_path, table_name, batch_size=50000):
         batch = df.iloc[start:start + batch_size].values.tolist()
         cur.executemany(sql, batch)
     conn.commit()
-    print(f"✅ {table_name}: вставлено {total:,} строк ({csv_path})")
+    # print(f"✅ {table_name}: вставлено {total:,} строк ({csv_path})")
 
 
 # --- 3️⃣ Основная функция ---
@@ -43,33 +43,33 @@ def main():
     cur.execute("PRAGMA journal_mode=WAL;")
     cur.execute("PRAGMA synchronous=NORMAL;")
     conn.commit()
-
-    # --- Создание таблиц ---
-    cur.executescript("""
-    CREATE TABLE IF NOT EXISTS sellers (
-        id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS orders (
-        id INTEGER PRIMARY KEY,
-        external_id TEXT NOT NULL,
-        date TEXT NOT NULL,
-        channel TEXT NOT NULL,
-        seller_id INTEGER,
-        status TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        delivered_at TEXT,
-        FOREIGN KEY(seller_id) REFERENCES sellers(id)
-    );
-    CREATE TABLE IF NOT EXISTS order_items (
-        order_id INTEGER NOT NULL,
-        sku TEXT NOT NULL,
-        qty INTEGER NOT NULL,
-        revenue REAL NOT NULL,
-        cost REAL NOT NULL,
-        FOREIGN KEY(order_id) REFERENCES orders(id)
-    );
-    """)
+    if args.db == ":memory:":
+        # --- Создание таблиц ---
+        cur.executescript("""
+        CREATE TABLE IF NOT EXISTS sellers (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY,
+            external_id TEXT NOT NULL,
+            date TEXT NOT NULL,
+            channel TEXT NOT NULL,
+            seller_id INTEGER,
+            status TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            delivered_at TEXT,
+            FOREIGN KEY(seller_id) REFERENCES sellers(id)
+        );
+        CREATE TABLE IF NOT EXISTS order_items (
+            order_id INTEGER NOT NULL,
+            sku TEXT NOT NULL,
+            qty INTEGER NOT NULL,
+            revenue REAL NOT NULL,
+            cost REAL NOT NULL,
+            FOREIGN KEY(order_id) REFERENCES orders(id)
+        );
+        """)
 
     # --- Очистка перед загрузкой ---
     cur.executescript("DELETE FROM order_items; DELETE FROM orders; DELETE FROM sellers;")
@@ -90,12 +90,12 @@ def main():
     CREATE INDEX IF NOT EXISTS idx_orders_delivered_at ON orders(delivered_at);
     CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
     """)
-    print("✅ Индексы созданы")
+    
 
     # --- Выполнение SQL-выгрузки ---
     sql_query = Path("sql/export.sql").read_text(encoding="utf-8")
     orders_df = pd.read_sql_query(sql_query, conn, params={"days": args.days})
-    print(f"✅ Выгрузка готова: {len(orders_df):,} строк")
+    
 
     # --- 7️⃣ Summary ---
     summary_df = (
