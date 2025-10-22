@@ -7,7 +7,7 @@ from openpyxl.chart import BarChart, Reference
 from openpyxl.utils import get_column_letter
 
 
-# --- 1️⃣ Парсер аргументов ---
+# --- 1 Парсер аргументов ---
 def parse_args():
     parser = argparse.ArgumentParser(description="Сбор Excel-отчёта из CSV и SQL")
     parser.add_argument("--days", type=int, default=90, help="Период в днях для выборки")
