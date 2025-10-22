@@ -74,7 +74,7 @@ def main():
     # --- Очистка перед загрузкой ---
     cur.executescript("DELETE FROM order_items; DELETE FROM orders; DELETE FROM sellers;")
     conn.commit()
-    print("♻️ Старые данные очищены")
+   
 
     # --- Загрузка CSV ---
     data_dir = Path("data")
