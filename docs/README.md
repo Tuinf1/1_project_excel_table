@@ -7,5 +7,4 @@ py -3.11 -m venv venv
 .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 
-# CSV (если генерируются автоматически)
-data/*.csv
+python data/generate_data.py --email you@domain.com --orders 8000 --days 30

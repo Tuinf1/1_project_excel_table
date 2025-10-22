@@ -110,15 +110,9 @@ def main():
         .sort_values(["channel", "seller"])
     )
 
-    # # --- 8️⃣ Подсчёт статусов (на уровне заказов) ---
-    # status_df = (
-    #     orders_df.groupby("status", as_index=False)
-    #     .agg(cnt=("order_id", "nunique"))
-    #     .sort_values("cnt", ascending=False)
-    # )
 
 
-    # --- 8️⃣ Подсчёт статусов (на уровне заказов, строго по ТЗ) ---
+    # --- 8️⃣ Подсчёт статусов --
     orders_raw = pd.read_csv("data/orders.csv")
 
     stages = ["created", "paid", "prod_started", "shipped", "delivered"]
@@ -151,30 +145,7 @@ def main():
     ])
 
 
-    # --- 9️⃣ Воронка и конверсии ---
-    stages = ["created", "paid", "prod_started", "shipped", "delivered"]
-    funnel_counts = {s: status_df.loc[status_df["status"] == s, "cnt"].sum() for s in stages}
-
-    # 
-    for i in range(1, len(stages)):
-        if funnel_counts[stages[i]] > funnel_counts[stages[i - 1]]:
-            funnel_counts[stages[i]] = funnel_counts[stages[i - 1]]
-
-    conv_pairs = [
-        ("paid", "created"),
-        ("prod_started", "paid"),
-        ("shipped", "prod_started"),
-        ("delivered", "shipped"),
-        ("delivered", "created"),
-    ]
-    print("Funnel counts:")
-    for s in stages:
-        print(f"{s}: {funnel_counts[s]}")
-    conv_df = pd.DataFrame([
-    {"stage": f"{b}/{a}", "rate": round(funnel_counts[b] / funnel_counts[a], 4) if funnel_counts[a] else 0.0}
-        for b, a in conv_pairs
-    ])
-
+    
     # --- 10️⃣ Маржа по каналам ---
     margin_by_channel = (
         orders_df.groupby("channel", as_index=False)["margin"]
