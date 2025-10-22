@@ -5,7 +5,7 @@ from pathlib import Path
 from openpyxl import load_workbook
 from openpyxl.chart import BarChart, Reference
 from openpyxl.utils import get_column_letter
-
+from openpyxl.chart.label import DataLabelList
 
 # --- 1 Парсер аргументов ---
 def parse_args():
@@ -114,35 +114,40 @@ def main():
 
     # --- 8️⃣ Подсчёт статусов --
     orders_raw = pd.read_csv("data/orders.csv")
-
-    stages = ["created", "paid", "prod_started", "shipped", "delivered"]
-
-    status_df = (
-        orders_raw[orders_raw["status"].isin(stages)]
-        .groupby("status", as_index=False)
-        .agg(cnt=("id", "count"))
+     # Матрица статусов
+    status_pivot = (
+        orders_raw.assign(flag=1)
+        .pivot_table(index="external_id", columns="status", values="flag", aggfunc="max", fill_value=0)
+        .reset_index()
     )
 
-    # --- 9️⃣ Воронка и конверсии ---
-    funnel_counts = {s: int(status_df.loc[status_df["status"] == s, "cnt"].sum()) for s in stages}
+    if "delivered" in status_pivot.columns:
+        delivered_mask = status_pivot["delivered"] == 1
+        cols_to_fill = [c for c in ["created", "paid", "prod_started", "shipped"] if c in status_pivot.columns]
+        status_pivot.loc[delivered_mask, cols_to_fill] = 1
 
-    # не допускаем роста стадий (если статистически получилось больше)
-    for i in range(1, len(stages)):
-        if funnel_counts[stages[i]] > funnel_counts[stages[i - 1]]:
-            funnel_counts[stages[i]] = funnel_counts[stages[i - 1]]
+    status_pivot["created"] = 1
 
+    # Подсчёт по стадиям
+    s_created = status_pivot["created"].sum()
+    s_paid = status_pivot["paid"].sum()
+    s_prod_started = status_pivot["prod_started"].sum()
+    s_shipped = status_pivot["shipped"].sum()
+    s_delivered = status_pivot["delivered"].sum()
+
+    # Конверсии
     conv_pairs = [
-        ("paid", "created"),
-        ("prod_started", "paid"),
-        ("shipped", "prod_started"),
-        ("delivered", "shipped"),
-        ("delivered", "created"),
+        ("paid/created", round(s_paid / s_created, 4) if s_created else 0),
+        ("prod_started/paid", round(s_prod_started / s_paid, 4) if s_paid else 0),
+        ("shipped/prod_started", round(s_shipped / s_prod_started, 4) if s_prod_started else 0),
+        ("delivered/shipped", round(s_delivered / s_shipped, 4) if s_shipped else 0),
+        ("delivered/created", round(s_delivered / s_created, 4) if s_created else 0),
     ]
+    conv_df = pd.DataFrame(conv_pairs, columns=["stage", "ratio"])
 
-    conv_df = pd.DataFrame([
-        {"stage": f"{b}/{a}", "rate": round(funnel_counts[b] / funnel_counts[a], 4) if funnel_counts[a] else 0.0}
-        for b, a in conv_pairs
-    ])
+    
+
+ 
 
 
     
@@ -189,13 +194,21 @@ def main():
     wb = load_workbook(out_path)
     ws_dash = wb["Dashboard"]
 
-    # График 1 — Conversion Funnel
+   # --- График Conversion Funnel ---
     chart_conv = BarChart()
-    chart_conv.title = "Conversion Funnel"
+    chart_conv.title = "Conversion Funnel (по единицам)"
+    chart_conv.y_axis.title = "Конверсия"
+    chart_conv.x_axis.title = "Этап перехода"
+
     data = Reference(ws_dash, min_col=2, min_row=2, max_row=1 + len(conv_df))
     cats = Reference(ws_dash, min_col=1, min_row=2, max_row=1 + len(conv_df))
     chart_conv.add_data(data, titles_from_data=False)
     chart_conv.set_categories(cats)
+
+    chart_conv.dataLabels = DataLabelList()
+    chart_conv.dataLabels.showVal = True
+    chart_conv.dataLabels.numFmt = "0.0000"
+
     ws_dash.add_chart(chart_conv, "E2")
 
     # График 2 — Margin by Channel

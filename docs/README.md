@@ -37,3 +37,11 @@ python data/generate_data.py --email you@domain.com --orders 8000 --days 30
 Пример:
 --orders 5000  # данные периодом 90 дней
 Значение по умолчанию: 90
+
+3. --out
+Тип: строка (путь к папке)
+Зачем нужен: указывает, куда сохранять сгенерированные .csv-файлы.
+По умолчанию: data/
+Пример:
+--out tmp/
+Тогда файлы окажутся в tmp/sellers.csv, tmp/orders.csv и tmp/order_items.csv.
