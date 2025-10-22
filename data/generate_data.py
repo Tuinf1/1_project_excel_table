@@ -62,7 +62,7 @@ def main():
     ap.add_argument("--email", required=True, help="используется как seed")
     ap.add_argument("--orders", type=int, default=8000)
     ap.add_argument("--days", type=int, default=90, help="диапазон дат, последние N дней")
-    # ap.add_argument("--db", default=":memory:", help="Путь к SQLite базе или :memory:")
+    ap.add_argument("--out", default="data", help="папка вывода") 
     args = ap.parse_args()
 
     rng = seeded_rng(args.email)
