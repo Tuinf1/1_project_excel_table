@@ -121,7 +121,7 @@ def main():
     stages = ["created", "paid", "prod_started", "shipped", "delivered"]
     funnel_counts = {s: status_df.loc[status_df["status"] == s, "cnt"].sum() for s in stages}
 
-    # делаем кумулятивность (чтобы не нарушалась последовательность)
+    # 
     for i in range(1, len(stages)):
         if funnel_counts[stages[i]] > funnel_counts[stages[i - 1]]:
             funnel_counts[stages[i]] = funnel_counts[stages[i - 1]]
@@ -133,8 +133,11 @@ def main():
         ("delivered", "shipped"),
         ("delivered", "created"),
     ]
+    print("Funnel counts:")
+    for s in stages:
+        print(f"{s}: {funnel_counts[s]}")
     conv_df = pd.DataFrame([
-        {"stage": f"{b}/{a}", "rate": round(funnel_counts[b] / funnel_counts[a], 4) if funnel_counts[a] else 0}
+    {"stage": f"{b}/{a}", "rate": round(funnel_counts[b] / funnel_counts[a], 4) if funnel_counts[a] else 0.0}
         for b, a in conv_pairs
     ])
 
