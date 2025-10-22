@@ -154,7 +154,7 @@ def main():
     )
 
     # --- 11️⃣ Checks ---
-    print("🧩 Проверка данных...")
+    # print("🧩 Проверка данных...")
     bad_qty_df = orders_df.query("qty <= 0")[["order_id", "external_id", "sku", "qty", "status"]]
     bad_margin_df = orders_df.query("margin < 0")[["order_id", "external_id", "sku", "revenue", "cost", "margin", "status"]]
     missing_refs_df = orders_df[
@@ -176,7 +176,7 @@ def main():
     # --- 12️⃣ Формирование Excel ---
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    print(f"💾 Формируем Excel → {out_path}")
+    # print(f"💾 Формируем Excel → {out_path}")
 
     with pd.ExcelWriter(out_path, engine="openpyxl") as writer:
         orders_df.to_excel(writer, sheet_name="Orders", index=False)
@@ -215,7 +215,7 @@ def main():
             ws.column_dimensions[get_column_letter(col[0].column)].width = min(max_len + 2, 40)
 
     wb.save(out_path)
-
+    print(total_issues)
     if total_issues > 0:
         print(f"❌ Найдены проблемы ({total_issues} строк). См. лист Checks.")
         exit(1)
